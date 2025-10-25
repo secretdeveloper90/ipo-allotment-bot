@@ -514,6 +514,10 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     BOT_TOKEN = os.getenv("BOT_TOKEN")
+    WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # e.g., https://your-app.onrender.com
+    PORT = int(os.getenv("PORT", 10000))
+    USE_WEBHOOK = os.getenv("USE_WEBHOOK", "true").lower() == "true"
+
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     app.add_handler(CommandHandler("start", start))
@@ -526,7 +530,22 @@ def main():
 
     logger.info("🚀 Bot is running...")
     print("🚀 Bot is running...")
-    app.run_polling()
+
+    if USE_WEBHOOK and WEBHOOK_URL:
+        # Webhook mode for production (Render)
+        logger.info(f"Using webhook mode: {WEBHOOK_URL}")
+
+        # Use python-telegram-bot's built-in webhook support
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path=BOT_TOKEN,
+            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}"
+        )
+    else:
+        # Polling mode for local development
+        logger.info("Using polling mode")
+        app.run_polling()
 
 if __name__ == "__main__":
     main()
