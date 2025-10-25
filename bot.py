@@ -1,5 +1,5 @@
 import requests
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 from database import init_db, add_pan, get_all_pans, delete_pan_by_id, get_pan_count
 from datetime import datetime
@@ -34,17 +34,25 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_msg += "• ✅ Check allotment status for all your PANs\n\n"
     welcome_msg += "Use the menu below to get started! 👇"
 
-    keyboard = [
+    # Reply keyboard (persistent keyboard at bottom)
+    reply_keyboard = [
+        ["🔍 Check IPO Allotment", "📋 Manage PAN Number"],
+        ["🔄 Refresh IPO List", "🏠 Main Menu"]
+    ]
+    reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
+
+    # Inline keyboard (buttons below message)
+    inline_keyboard = [
         [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan"),
          InlineKeyboardButton("📊 Check IPO Allotment", callback_data="ipo_list_0")],
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ]
 
-    logger.info(f"Sending start message with {len(keyboard)} rows of buttons")
+    logger.info(f"Sending start message with {len(inline_keyboard)} rows of buttons")
 
     await update.message.reply_text(
         welcome_msg,
-        reply_markup=InlineKeyboardMarkup(keyboard),
+        reply_markup=reply_markup,  # Use reply keyboard instead of inline
         parse_mode="Markdown"
     )
 
@@ -433,10 +441,146 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await loading_msg.edit_text(msg, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if context.user_data.get("awaiting_pan"):
-        text = update.message.text.strip()
-        user_id = update.message.from_user.id
+    text = update.message.text.strip()
+    user_id = update.message.from_user.id
 
+    # Handle reply keyboard button presses
+    if text == "🔍 Check IPO Allotment":
+        # Simulate callback query for IPO list
+        try:
+            page = 0
+            res = requests.get(API_URL, timeout=10)
+            if res.status_code == 200:
+                ipos = res.json().get("data", [])
+                if not ipos:
+                    await update.message.reply_text("❌ No IPOs found")
+                    return
+
+                # Get user's PAN count
+                pan_count = get_pan_count(user_id)
+
+                # Calculate pagination
+                total_ipos = len(ipos)
+                total_pages = (total_ipos + IPOS_PER_PAGE - 1) // IPOS_PER_PAGE
+                start_idx = page * IPOS_PER_PAGE
+                end_idx = min(start_idx + IPOS_PER_PAGE, total_ipos)
+
+                # Create inline keyboard with IPO buttons for current page
+                keyboard = []
+                for ipo in ipos[start_idx:end_idx]:
+                    ipo_name = ipo.get('iponame', 'N/A')
+                    ipo_id = ipo.get('ipoid', '')
+                    # Truncate long names
+                    display_name = ipo_name[:45] + "..." if len(ipo_name) > 45 else ipo_name
+                    keyboard.append([InlineKeyboardButton(f"🔹 {display_name}", callback_data=f"check_{ipo_id}")])
+
+                # Add pagination buttons
+                nav_buttons = []
+                if page > 0:
+                    nav_buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"ipo_list_{page-1}"))
+                if page < total_pages - 1:
+                    nav_buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"ipo_list_{page+1}"))
+
+                if nav_buttons:
+                    keyboard.append(nav_buttons)
+
+                # Add refresh button
+                keyboard.append([InlineKeyboardButton("🔄 Refresh IPO List", callback_data=f"ipo_list_{page}")])
+
+                # Add back button
+                keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_menu")])
+
+                # Build message with IPO count and PAN count
+                msg = f"📊 *IPO Allotment Check*\n\n"
+                msg += f"✅ IPO list updated ({total_ipos} IPOs available)\n\n"
+                msg += f"Select an IPO to check allotment status for your {pan_count} PAN number(s):\n\n"
+                msg += f"📄 Page {page + 1} of {total_pages}"
+
+                await update.message.reply_text(
+                    msg,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode="Markdown"
+                )
+            else:
+                await update.message.reply_text("❌ Failed to fetch IPO list. Please try again later.")
+        except requests.exceptions.Timeout:
+            await update.message.reply_text("⏱️ Request timed out. Please try again.")
+        except Exception as e:
+            logger.error(f"Error fetching IPO list: {e}")
+            await update.message.reply_text("❌ An error occurred. Please try again later.")
+
+    elif text == "📋 Manage PAN Number":
+        # Show PAN management menu
+        msg = "📋 *PAN Number Management*\n\n"
+        msg += "Choose an option:"
+        keyboard = [
+            [InlineKeyboardButton("📋 View My PANs", callback_data="view_pans")],
+            [InlineKeyboardButton("➕ Add PAN Number", callback_data="add_pan")],
+            [InlineKeyboardButton("❌ Delete PAN Number", callback_data="delete_pan_menu")],
+            [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_menu")]
+        ]
+        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+
+    elif text == "🔄 Refresh IPO List":
+        # Refresh IPO list
+        await update.message.reply_text("🔄 Refreshing IPO list...")
+        # Trigger the same action as "Check IPO Allotment"
+        try:
+            page = 0
+            res = requests.get(API_URL, timeout=10)
+            if res.status_code == 200:
+                ipos = res.json().get("data", [])
+                if not ipos:
+                    await update.message.reply_text("❌ No IPOs found")
+                    return
+
+                pan_count = get_pan_count(user_id)
+                total_ipos = len(ipos)
+                total_pages = (total_ipos + IPOS_PER_PAGE - 1) // IPOS_PER_PAGE
+                start_idx = page * IPOS_PER_PAGE
+                end_idx = min(start_idx + IPOS_PER_PAGE, total_ipos)
+
+                keyboard = []
+                for ipo in ipos[start_idx:end_idx]:
+                    ipo_name = ipo.get('iponame', 'N/A')
+                    ipo_id = ipo.get('ipoid', '')
+                    display_name = ipo_name[:45] + "..." if len(ipo_name) > 45 else ipo_name
+                    keyboard.append([InlineKeyboardButton(f"🔹 {display_name}", callback_data=f"check_{ipo_id}")])
+
+                nav_buttons = []
+                if page > 0:
+                    nav_buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"ipo_list_{page-1}"))
+                if page < total_pages - 1:
+                    nav_buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"ipo_list_{page+1}"))
+
+                if nav_buttons:
+                    keyboard.append(nav_buttons)
+
+                keyboard.append([InlineKeyboardButton("🔄 Refresh IPO List", callback_data=f"ipo_list_{page}")])
+                keyboard.append([InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_menu")])
+
+                msg = f"📊 *IPO Allotment Check*\n\n"
+                msg += f"✅ IPO list refreshed ({total_ipos} IPOs available)\n\n"
+                msg += f"Select an IPO to check allotment status for your {pan_count} PAN number(s):\n\n"
+                msg += f"📄 Page {page + 1} of {total_pages}"
+
+                await update.message.reply_text(
+                    msg,
+                    reply_markup=InlineKeyboardMarkup(keyboard),
+                    parse_mode="Markdown"
+                )
+            else:
+                await update.message.reply_text("❌ Failed to refresh IPO list. Please try again later.")
+        except Exception as e:
+            logger.error(f"Error refreshing IPO list: {e}")
+            await update.message.reply_text("❌ An error occurred. Please try again later.")
+
+    elif text == "🏠 Main Menu":
+        # Show main menu
+        await show_main_menu(update.message)
+
+    elif context.user_data.get("awaiting_pan"):
+        # Handle PAN input
         # Parse the input - support multiple formats
         # Format 1: ABCDE1234F (PAN only)
         # Format 2: ABCDE1234F  John Doe (PAN with name, separated by spaces)
@@ -483,7 +627,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             keyboard = [
                 [InlineKeyboardButton("📋 View My PANs", callback_data="view_pans")],
-                [InlineKeyboardButton("� Check Allotment", callback_data="ipo_list_0")],
+                [InlineKeyboardButton("📊 Check Allotment", callback_data="ipo_list_0")],
                 [InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
             ]
             await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
