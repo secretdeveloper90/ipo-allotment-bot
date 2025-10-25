@@ -1,5 +1,5 @@
 import requests
-from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
+from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 from database import init_db, add_pan, get_all_pans, delete_pan_by_id, get_pan_count
 from datetime import datetime
@@ -23,6 +23,12 @@ IPOS_PER_PAGE = 10
 init_db()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # First, remove any custom keyboard
+    await update.message.reply_text(
+        "Loading...",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
     # Send welcome message with bot description
     welcome_msg = "🎉 *Welcome to IPO Allotment Bot!*\n\n"
     welcome_msg += "This bot helps you check IPO allotment status for multiple PAN numbers.\n\n"
@@ -33,8 +39,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_msg += "Use the menu below to get started! 👇"
 
     keyboard = [
-        [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan")],
-        [InlineKeyboardButton("📊 Check IPO Allotment", callback_data="ipo_list_0")],
+        [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan"),
+         InlineKeyboardButton("📊 Check IPO Allotment", callback_data="ipo_list_0")],
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ]
 
@@ -70,8 +76,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg += "Use the buttons below to navigate! 👇"
 
     keyboard = [
-        [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan")],
-        [InlineKeyboardButton("📊 Check IPO Allotment", callback_data="ipo_list_0")],
+        [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan"),
+         InlineKeyboardButton("📊 Check IPO Allotment", callback_data="ipo_list_0")],
         [InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
     ]
 
@@ -82,8 +88,8 @@ async def show_main_menu(message, text=None):
         text = "🏠 *Main Menu*\n\nWhat would you like to do?"
 
     keyboard = [
-        [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan")],
-        [InlineKeyboardButton("📊 Check IPO Allotment", callback_data="ipo_list_0")],
+        [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan"),
+         InlineKeyboardButton("📊 Check IPO Allotment", callback_data="ipo_list_0")],
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ]
     await message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
