@@ -43,9 +43,15 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         res = requests.get(API_URL)
         if res.status_code == 200:
             ipos = res.json().get("data", [])
+            if not ipos:
+                await query.message.reply_text("No IPOs found ❌")
+                return
+
             msg = "📋 *Alloted IPO List:*\n\n"
             for ipo in ipos:
-                msg += f"🔹 {ipo['ipoName']}\n🗓️ {ipo['ipoAllotmentDate']}\n\n"
+                # Use lowercase keys as per API response
+                ipo_name = ipo.get('iponame', 'N/A')
+                msg += f"🔹 {ipo_name}\n\n"
             await query.message.reply_text(msg, parse_mode="Markdown")
         else:
             await query.message.reply_text("Failed to fetch IPO list ❌")
