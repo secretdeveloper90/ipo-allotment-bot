@@ -58,7 +58,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["awaiting_pan"] = False
         await update.message.reply_text(f"✅ PAN saved successfully: {pan}")
 
-async def main():
+def main():
     BOT_TOKEN = os.getenv("BOT_TOKEN")
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -67,8 +67,7 @@ async def main():
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
     print("🚀 Bot is running...")
-    await app.run_polling()
+    app.run_polling()
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
