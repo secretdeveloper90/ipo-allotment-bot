@@ -23,11 +23,7 @@ IPOS_PER_PAGE = 10
 init_db()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # First, remove any custom keyboard
-    await update.message.reply_text(
-        "Loading...",
-        reply_markup=ReplyKeyboardRemove()
-    )
+    logger.info(f"Start command received from user {update.message.from_user.id}")
 
     # Send welcome message with bot description
     welcome_msg = "🎉 *Welcome to IPO Allotment Bot!*\n\n"
@@ -44,11 +40,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("ℹ️ Help", callback_data="help")]
     ]
 
+    logger.info(f"Sending start message with {len(keyboard)} rows of buttons")
+
     await update.message.reply_text(
         welcome_msg,
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode="Markdown"
     )
+
+    logger.info("Start message sent successfully")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📚 *How to use IPO Allotment Bot:*\n\n"
