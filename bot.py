@@ -334,11 +334,18 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pan_numbers = [pan_data["pan"] for pan_data in pans]
 
             payload = {
-                "ipoId": ipo_id,
-                "panCards": pan_numbers
+                "ipoid": ipo_id,
+                "pancard": pan_numbers
             }
 
+            # Log the payload for debugging
+            logger.info(f"Sending payload to API: {payload}")
+
             response = requests.post(CHECK_ALLOTMENT_URL, json=payload, timeout=30)
+
+            # Log the response for debugging
+            logger.info(f"API Response Status: {response.status_code}")
+            logger.info(f"API Response Body: {response.text}")
 
             if response.status_code == 200:
                 result = response.json()
