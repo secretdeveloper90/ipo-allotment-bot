@@ -9,10 +9,32 @@ You need to set the following environment variables in your Render dashboard:
 1. **BOT_TOKEN**: Your Telegram bot token from @BotFather
 2. **USE_WEBHOOK**: Set to `true` for production (webhook mode)
 3. **WEBHOOK_URL**: Your Render app URL (e.g., `https://your-app-name.onrender.com`)
+4. **DATA_DIR**: Path to persistent storage (e.g., `/data`) - **IMPORTANT for data persistence**
 
 ### Optional Variables
 
 - **PORT**: Port number (Render sets this automatically, default is 10000)
+
+## IMPORTANT: Setting Up Persistent Storage on Render
+
+**Without persistent storage, all PAN numbers will be lost on every restart/redeploy!**
+
+### Steps to Add Persistent Disk:
+
+1. Go to your Render service dashboard
+2. Click on **"Disks"** in the left sidebar
+3. Click **"Add Disk"**
+4. Configure the disk:
+   - **Name**: `data`
+   - **Mount Path**: `/data`
+   - **Size**: 1 GB (free tier allows up to 1GB)
+5. Click **"Save"**
+6. Add environment variable:
+   - **Key**: `DATA_DIR`
+   - **Value**: `/data`
+7. Redeploy your service
+
+This ensures your SQLite database persists across restarts and redeployments.
 
 ## Render Deployment Steps
 

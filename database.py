@@ -1,6 +1,13 @@
 import sqlite3
+import os
 
-DB_NAME = "users.db"
+# Use persistent storage path if available (Render Disk), otherwise use local
+DATA_DIR = os.getenv("DATA_DIR", ".")
+DB_PATH = os.path.join(DATA_DIR, "users.db")
+DB_NAME = DB_PATH
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
 
 def init_db():
     conn = sqlite3.connect(DB_NAME)
