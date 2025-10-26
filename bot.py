@@ -654,7 +654,18 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Get user's PANs
                 pans = get_all_pans(user_id)
                 if not pans:
-                    await update.message.reply_text("❌ No PAN numbers found. Please add a PAN first.")
+                    # Show PAN management keyboard when no PANs found
+                    reply_keyboard = [
+                        ["➕ Add PAN Number", "❌ Delete PAN Number"],
+                        ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
+                    ]
+                    reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
+                    await update.message.reply_text(
+                        "❌ *No PAN numbers found.*\n\n"
+                        "Please add a PAN first to check IPO allotment status.",
+                        reply_markup=reply_markup,
+                        parse_mode="Markdown"
+                    )
                     return
 
                 # Prepare API request
