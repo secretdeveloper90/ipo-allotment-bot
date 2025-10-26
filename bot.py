@@ -193,9 +193,9 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg += "`ABCDE1234F  John Doe`\n\n"
             msg += "� Tip: Separate PAN and name with a space"
 
-            # Show only Back to Main Menu button while waiting for PAN input
+            # Show only Back to PAN Management button while waiting for PAN input
             reply_keyboard = [
-                ["🔙 Back to Main Menu"]
+                ["🔙 Back to PAN Management"]
             ]
             reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
             await query.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
@@ -566,9 +566,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg += "`ABCDE1234F  John Doe`\n\n"
             msg += "💡 Tip: Separate PAN and name with a space"
 
-            # Show only Back to Main Menu button while waiting for PAN input
+            # Show only Back to PAN Management button while waiting for PAN input
             reply_keyboard = [
-                ["🔙 Back to Main Menu"]
+                ["🔙 Back to PAN Management"]
             ]
             reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
             await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
@@ -670,26 +670,26 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["pans_for_deletion"] = None
         context.user_data["awaiting_pan"] = False
 
-        # Show PAN management keyboard silently
+        # Show PAN management keyboard
         reply_keyboard = [
             ["➕ Add PAN Number", "❌ Delete PAN Number"],
             ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
         ]
         reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-        await update.message.reply_text("", reply_markup=reply_markup)
+        await update.message.reply_text("📋 *PAN Number Management*", reply_markup=reply_markup, parse_mode="Markdown")
 
     elif text == "🔙 Back to Main Menu":
         # Clear any pending state
         context.user_data["awaiting_pan"] = False
         context.user_data["pans_for_deletion"] = None
 
-        # Show Main Menu keyboard silently
+        # Show Main Menu keyboard
         reply_keyboard = [
             ["📋 Manage PAN Numbers", "📊 Check IPO Allotment"],
             ["ℹ️ Help"]
         ]
         reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-        await update.message.reply_text("", reply_markup=reply_markup)
+        await update.message.reply_text("🏠 *Main Menu*", reply_markup=reply_markup, parse_mode="Markdown")
 
     elif text.startswith("🗑️ Delete "):
         # Handle delete PAN button press
