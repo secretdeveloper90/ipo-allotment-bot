@@ -228,7 +228,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for idx, pan_data in enumerate(pans, 1):
                 name = pan_data['name']
                 pan = pan_data['pan']
-                button_text = f"🗑️ Delete {idx}: {name}"
+                button_text = f"🗑️ Delete {idx}: {pan} - {name}"
 
                 # Add 2 buttons per row
                 if idx % 2 == 1:
@@ -911,7 +911,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for idx, pan_data in enumerate(pans, 1):
                 name = pan_data['name']
                 pan = pan_data['pan']
-                button_text = f"🗑️ Delete {idx}: {name}"
+                button_text = f"🗑️ Delete {idx}: {pan} - {name}"
 
                 # Add 2 buttons per row
                 if idx % 2 == 1:
@@ -981,12 +981,14 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Error: No PANs available for deletion.")
             return
 
-        # Extract the index from button text (e.g., "🗑️ Delete 1: John Doe" -> 1)
+        # Extract the index from button text (e.g., "🗑️ Delete 1: ABCDE1234F - John Doe" -> 1)
         try:
-            # Split by ":" and get the number part
-            parts = text.split(":")
-            index_part = parts[0].replace("🗑️ Delete ", "").strip()
-            pan_index = int(index_part) - 1  # Convert to 0-based index
+            # Remove the prefix "🗑️ Delete " and split by ":"
+            # Format: "🗑️ Delete 1: ABCDE1234F - John Doe"
+            text_without_prefix = text.replace("🗑️ Delete ", "").strip()
+            # Split by ":" to separate index from rest
+            parts = text_without_prefix.split(":", 1)
+            pan_index = int(parts[0].strip()) - 1  # Convert to 0-based index
 
             if 0 <= pan_index < len(pans):
                 pan_data = pans[pan_index]
@@ -998,7 +1000,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 delete_pan_by_id(pan_id)
 
                 msg = f"✅ *PAN Deleted Successfully*\n\n"
-                msg += f"🗑️ Deleted: *{name}* - `{pan}`"
+                msg += f"🗑️ Deleted: `{pan}` - *{name}*"
 
                 # Clear deletion state
                 context.user_data["pans_for_deletion"] = None
@@ -1014,6 +1016,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("❌ Invalid PAN selection.")
         except (ValueError, IndexError) as e:
             logger.error(f"Error parsing delete button: {e}")
+            logger.error(f"Button text was: {text}")
             await update.message.reply_text("❌ Error processing deletion.")
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
