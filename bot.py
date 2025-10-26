@@ -284,9 +284,9 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 for idx, ipo in enumerate(ipos[start_idx:end_idx]):
                     ipo_name = ipo.get('iponame', 'N/A')
                     ipo_id = ipo.get('ipoid', '')
-                    # Truncate long names
-                    display_name = ipo_name[:30] + "..." if len(ipo_name) > 30 else ipo_name
-                    button_text = f"🔹 {display_name}"
+                    # Truncate long names - no icon
+                    display_name = ipo_name[:35] + "..." if len(ipo_name) > 35 else ipo_name
+                    button_text = display_name
 
                     # Add 2 buttons per row
                     if idx % 2 == 0:
@@ -298,19 +298,18 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data["ipo_list"] = ipos[start_idx:end_idx]
                 context.user_data["current_page"] = page
 
-                # Add pagination buttons in one row
+                # Add pagination buttons (Previous and Next)
                 nav_buttons = []
                 if page > 0:
                     nav_buttons.append("⬅️ Previous")
-                nav_buttons.append("🔄 Refresh IPO List")
                 if page < total_pages - 1:
                     nav_buttons.append("Next ➡️")
 
                 if nav_buttons:
                     reply_keyboard.append(nav_buttons)
 
-                # Add back button
-                reply_keyboard.append(["🔙 Back to Main Menu"])
+                # Add refresh and back buttons in one row
+                reply_keyboard.append(["🔄 Refresh IPO List", "🔙 Back to Main Menu"])
 
                 reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
 
@@ -496,9 +495,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 for idx, ipo in enumerate(ipos[start_idx:end_idx]):
                     ipo_name = ipo.get('iponame', 'N/A')
                     ipo_id = ipo.get('ipoid', '')
-                    # Truncate long names
-                    display_name = ipo_name[:30] + "..." if len(ipo_name) > 30 else ipo_name
-                    button_text = f"🔹 {display_name}"
+                    # Truncate long names - no icon
+                    display_name = ipo_name[:35] + "..." if len(ipo_name) > 35 else ipo_name
+                    button_text = display_name
 
                     # Add 2 buttons per row
                     if idx % 2 == 0:
@@ -510,19 +509,18 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data["ipo_list"] = ipos[start_idx:end_idx]
                 context.user_data["current_page"] = page
 
-                # Add pagination buttons in one row
+                # Add pagination buttons (Previous and Next)
                 nav_buttons = []
                 if page > 0:
                     nav_buttons.append("⬅️ Previous")
-                nav_buttons.append("🔄 Refresh IPO List")
                 if page < total_pages - 1:
                     nav_buttons.append("Next ➡️")
 
                 if nav_buttons:
                     reply_keyboard.append(nav_buttons)
 
-                # Add back button
-                reply_keyboard.append(["🔙 Back to Main Menu"])
+                # Add refresh and back buttons in one row
+                reply_keyboard.append(["🔄 Refresh IPO List", "🔙 Back to Main Menu"])
 
                 reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
 
@@ -545,105 +543,99 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Error fetching IPO list: {e}")
             await update.message.reply_text("❌ An error occurred. Please try again later.")
 
-    elif text.startswith("🔹 "):
-        # Handle IPO selection from keyboard
+    elif text and not text.startswith("⬅️") and not text.startswith("Next") and not text.startswith("🔄") and not text.startswith("🔙") and not text.startswith("📋") and not text.startswith("❌") and not text.startswith("ℹ️") and not text.startswith("➕"):
+        # Handle IPO selection from keyboard (any text that's not a special button)
         ipo_list = context.user_data.get("ipo_list", [])
-        if not ipo_list:
-            await update.message.reply_text("❌ Error: IPO list not found. Please try again.")
-            return
+        if ipo_list:
+            # Extract IPO name from button text
+            selected_ipo_name = text.strip()
 
-        # Extract IPO name from button text
-        selected_ipo_name = text.replace("🔹 ", "").strip()
+            # Find the matching IPO
+            selected_ipo = None
+            for ipo in ipo_list:
+                ipo_name = ipo.get('iponame', 'N/A')
+                display_name = ipo_name[:35] + "..." if len(ipo_name) > 35 else ipo_name
+                if display_name == selected_ipo_name:
+                    selected_ipo = ipo
+                    break
 
-        # Find the matching IPO
-        selected_ipo = None
-        for ipo in ipo_list:
-            ipo_name = ipo.get('iponame', 'N/A')
-            display_name = ipo_name[:30] + "..." if len(ipo_name) > 30 else ipo_name
-            if display_name == selected_ipo_name:
-                selected_ipo = ipo
-                break
+            if selected_ipo:
+                # Get user's PANs
+                pans = get_all_pans(user_id)
+                if not pans:
+                    await update.message.reply_text("❌ No PAN numbers found. Please add a PAN first.")
+                    return
 
-        if not selected_ipo:
-            await update.message.reply_text("❌ Error: IPO not found. Please try again.")
-            return
+                # Prepare API request
+                ipo_id = selected_ipo.get('ipoid', '')
+                ipo_name = selected_ipo.get('iponame', 'N/A')
 
-        # Get user's PANs
-        pans = get_all_pans(user_id)
-        if not pans:
-            await update.message.reply_text("❌ No PAN numbers found. Please add a PAN first.")
-            return
+                try:
+                    payload = {
+                        "ipoId": ipo_id,
+                        "panCards": [pan["pan"] for pan in pans]
+                    }
 
-        # Prepare API request
-        ipo_id = selected_ipo.get('ipoid', '')
-        ipo_name = selected_ipo.get('iponame', 'N/A')
+                    logger.info(f"Sending payload to API: {payload}")
+                    response = requests.post(CHECK_ALLOTMENT_URL, json=payload, timeout=30)
 
-        try:
-            payload = {
-                "ipoId": ipo_id,
-                "panCards": [pan["pan"] for pan in pans]
-            }
+                    logger.info(f"API Response Status: {response.status_code}")
+                    logger.info(f"API Response Body: {response.text}")
 
-            logger.info(f"Sending payload to API: {payload}")
-            response = requests.post(CHECK_ALLOTMENT_URL, json=payload, timeout=30)
+                    if response.status_code == 200:
+                        result = response.json()
 
-            logger.info(f"API Response Status: {response.status_code}")
-            logger.info(f"API Response Body: {response.text}")
+                        if result.get("success"):
+                            data_array = result.get("data", [])
 
-            if response.status_code == 200:
-                result = response.json()
+                            pan_response_map = {}
+                            for item in data_array:
+                                pancard = item.get("pancard", "")
+                                pan_response_map[pancard] = item.get("data", {})
 
-                if result.get("success"):
-                    data_array = result.get("data", [])
+                            msg = "🏦 *IPO Allotment Status*\n\n"
+                            msg += f"🏢 *IPO:* {ipo_name}\n\n"
 
-                    pan_response_map = {}
-                    for item in data_array:
-                        pancard = item.get("pancard", "")
-                        pan_response_map[pancard] = item.get("data", {})
+                            for idx, pan_data in enumerate(pans, 1):
+                                pan_number = pan_data["pan"]
+                                pan_name = pan_data["name"]
 
-                    msg = "🏦 *IPO Allotment Status*\n\n"
-                    msg += f"🏢 *IPO:* {ipo_name}\n\n"
+                                msg += f"👤 *{idx}. {pan_name}*\n"
+                                msg += f"   📋 PAN: `{pan_number}`\n"
 
-                    for idx, pan_data in enumerate(pans, 1):
-                        pan_number = pan_data["pan"]
-                        pan_name = pan_data["name"]
+                                pan_response = pan_response_map.get(pan_number, {})
 
-                        msg += f"👤 *{idx}. {pan_name}*\n"
-                        msg += f"   📋 PAN: `{pan_number}`\n"
+                                if pan_response and pan_response.get("success"):
+                                    data_result = pan_response.get("dataResult", {})
+                                    status = data_result.get("status", "Unknown")
+                                    shares_allotted = data_result.get("shares_allotted", "0")
 
-                        pan_response = pan_response_map.get(pan_number, {})
+                                    if status.lower() == "not apply":
+                                        msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
+                                    elif status.lower() == "allotted":
+                                        msg += f"   📊 Status: ✅ ALLOTTED\n"
+                                        msg += f"   📈 Shares Allotted: {shares_allotted}\n\n"
+                                    else:
+                                        msg += f"   📊 Status: {status}\n"
+                                        if shares_allotted and shares_allotted != "0":
+                                            msg += f"   📈 Shares Allotted: {shares_allotted}\n"
+                                        msg += "\n"
+                                else:
+                                    msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
 
-                        if pan_response and pan_response.get("success"):
-                            data_result = pan_response.get("dataResult", {})
-                            status = data_result.get("status", "Unknown")
-                            shares_allotted = data_result.get("shares_allotted", "0")
-
-                            if status.lower() == "not apply":
-                                msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
-                            elif status.lower() == "allotted":
-                                msg += f"   📊 Status: ✅ ALLOTTED\n"
-                                msg += f"   📈 Shares Allotted: {shares_allotted}\n\n"
-                            else:
-                                msg += f"   📊 Status: {status}\n"
-                                if shares_allotted and shares_allotted != "0":
-                                    msg += f"   📈 Shares Allotted: {shares_allotted}\n"
-                                msg += "\n"
+                            # Show navigation buttons
+                            reply_keyboard = [
+                                ["🔄 Refresh IPO List", "🔙 Back to Main Menu"]
+                            ]
+                            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
+                            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
                         else:
-                            msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
-
-                    # Show navigation buttons
-                    reply_keyboard = [
-                        ["🔄 Refresh IPO List", "🔙 Back to Main Menu"]
-                    ]
-                    reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-                    await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
-                else:
-                    await update.message.reply_text("❌ Failed to fetch allotment status. Please try again.")
-            else:
-                await update.message.reply_text("❌ API Error. Please try again later.")
-        except Exception as e:
-            logger.error(f"Error checking allotment: {e}")
-            await update.message.reply_text("❌ An error occurred. Please try again.")
+                            await update.message.reply_text("❌ Failed to fetch allotment status. Please try again.")
+                    else:
+                        await update.message.reply_text("❌ API Error. Please try again later.")
+                except Exception as e:
+                    logger.error(f"Error checking allotment: {e}")
+                    await update.message.reply_text("❌ An error occurred. Please try again.")
 
     elif text == "⬅️ Previous":
         # Handle previous page
