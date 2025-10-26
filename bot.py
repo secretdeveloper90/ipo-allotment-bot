@@ -185,6 +185,7 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
             await query.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
         else:
+            context.user_data["awaiting_pan"] = True
             msg = f"➕ *Add New PAN Number* ({pan_count}/20)\n\n"
             msg += "Please send your PAN details in one of these formats:\n\n"
             msg += "*Format 1:* PAN only\n"
@@ -199,7 +200,6 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
             ]
             reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
             await query.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
-            context.user_data["awaiting_pan"] = True
 
     elif data == "delete_pan_menu":
         # Show list of PANs to delete
