@@ -18,7 +18,7 @@ API_URL = f"{BASE_URL}/ipos/allotedipo-list"
 CHECK_ALLOTMENT_URL = f"{BASE_URL}/ipos/check-ipoallotment"
 
 # Pagination settings
-IPOS_PER_PAGE = 10
+IPOS_PER_PAGE = 8  # Reduced from 10 to 8 to avoid scrolling on smaller devices
 
 init_db()
 
