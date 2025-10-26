@@ -566,32 +566,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += "💡 Use the keyboard buttons below to navigate!"
 
         await update.message.reply_text(msg, parse_mode="Markdown")
-            msg += "You have reached the maximum limit of 20 PAN numbers.\n"
-            msg += "Please delete some PANs before adding new ones."
-
-            # Show PAN management keyboard
-            reply_keyboard = [
-                ["➕ Add PAN Number", "❌ Delete PAN Number"],
-                ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
-            ]
-            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
-        else:
-            context.user_data["awaiting_pan"] = True
-            msg = f"📋 *Add PAN Number* ({pan_count}/20)\n\n"
-            msg += "Please send your PAN details in one of these formats:\n\n"
-            msg += "*Format 1:* PAN only\n"
-            msg += "`ABCDE1234F`\n\n"
-            msg += "*Format 2:* PAN with name\n"
-            msg += "`ABCDE1234F  John Doe`\n\n"
-            msg += "💡 Tip: Separate PAN and name with a space"
-
-            # Show only Back to Main Menu button while waiting for PAN input
-            reply_keyboard = [
-                ["🔙 Back to Main Menu"]
-            ]
-            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
 
     elif text == "❌ Delete PAN Number":
         # Show list of PANs to delete
