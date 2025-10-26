@@ -673,9 +673,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ipo_name = selected_ipo.get('iponame', 'N/A')
 
                 try:
+                    # Extract just the PAN numbers
+                    pan_numbers = [pan["pan"] for pan in pans]
+
                     payload = {
-                        "ipoId": ipo_id,
-                        "panCards": [pan["pan"] for pan in pans]
+                        "ipoid": ipo_id,
+                        "pancard": pan_numbers
                     }
 
                     logger.info(f"Sending payload to API: {payload}")
