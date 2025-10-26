@@ -405,15 +405,19 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     # Build the message header
                     msg = "🏦 *IPO Allotment Status*\n\n"
-                    msg += f"🏢 *IPO:* {ipo_name}\n\n"
+                    msg += f"📋 *IPO:* {ipo_name}\n\n"
+
+                    # Track allotment status
+                    allotted_count = 0
+                    not_allotted_count = 0
 
                     # Process each PAN and display status
                     for idx, pan_data in enumerate(pans, 1):
                         pan_number = pan_data["pan"]
                         pan_name = pan_data["name"]
 
-                        msg += f"👤 *{idx}. {pan_name}*\n"
-                        msg += f"   📋 PAN: `{pan_number}`\n"
+                        msg += f"*{idx}.* 👤 *{pan_name}*\n"
+                        msg += f"      📋 PAN: `{pan_number}`\n"
 
                         # Get the response for this PAN
                         pan_response = pan_response_map.get(pan_number, {})
@@ -426,19 +430,34 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                             # Check status and display accordingly
                             if status.lower() == "not apply":
-                                msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
+                                msg += f"      📊 Status: ❌ NOT APPLIED\n\n"
                             elif status.lower() == "allotted":
-                                msg += f"   📊 Status: ✅ ALLOTTED\n"
-                                msg += f"   📈 Shares Allotted: {shares_allotted}\n\n"
+                                allotted_count += 1
+                                msg += f"      ✅ Status: *ALLOTTED*\n"
+                                msg += f"      📈 Shares: *{shares_allotted}*\n\n"
                             else:
-                                # Show any other status
-                                msg += f"   📊 Status: {status}\n"
-                                if shares_allotted and shares_allotted != "0":
-                                    msg += f"   📈 Shares Allotted: {shares_allotted}\n"
-                                msg += "\n"
+                                # Check if it's "not allotted" status
+                                if status.lower() in ["not allotted", "not alloted"]:
+                                    not_allotted_count += 1
+                                    msg += f"      ❌ Status: *NOT ALLOTTED*\n\n"
+                                else:
+                                    # Show any other status
+                                    msg += f"      📊 Status: {status}\n"
+                                    if shares_allotted and shares_allotted != "0":
+                                        msg += f"      📈 Shares: {shares_allotted}\n"
+                                    msg += "\n"
                         else:
                             # No valid response for this PAN
-                            msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
+                            msg += f"      📊 Status: ❌ NOT APPLIED\n\n"
+
+                    # Add congratulatory or encouragement message
+                    if allotted_count > 0:
+                        if allotted_count == 1:
+                            msg += "🎉 *Congratulations!* You have been allotted 1 IPO!\n"
+                        else:
+                            msg += f"🎉 *Congratulations!* You have been allotted {allotted_count} IPOs!\n"
+                    elif not_allotted_count > 0:
+                        msg += "💪 *Better luck next time!* Keep trying.\n"
 
                     # Add navigation buttons
                     keyboard = [
@@ -699,14 +718,18 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                 pan_response_map[pancard] = item.get("data", {})
 
                             msg = "🏦 *IPO Allotment Status*\n\n"
-                            msg += f"🏢 *IPO:* {ipo_name}\n\n"
+                            msg += f"📋 *IPO:* {ipo_name}\n\n"
+
+                            # Track allotment status
+                            allotted_count = 0
+                            not_allotted_count = 0
 
                             for idx, pan_data in enumerate(pans, 1):
                                 pan_number = pan_data["pan"]
                                 pan_name = pan_data["name"]
 
-                                msg += f"👤 *{idx}. {pan_name}*\n"
-                                msg += f"   📋 PAN: `{pan_number}`\n"
+                                msg += f"*{idx}.* 👤 *{pan_name}*\n"
+                                msg += f"      📋 PAN: `{pan_number}`\n"
 
                                 pan_response = pan_response_map.get(pan_number, {})
 
@@ -716,24 +739,35 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                     shares_allotted = data_result.get("shares_allotted", "0")
 
                                     if status.lower() == "not apply":
-                                        msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
+                                        msg += f"      📊 Status: ❌ NOT APPLIED\n\n"
                                     elif status.lower() == "allotted":
-                                        msg += f"   📊 Status: ✅ ALLOTTED\n"
-                                        msg += f"   📈 Shares Allotted: {shares_allotted}\n\n"
+                                        allotted_count += 1
+                                        msg += f"      ✅ Status: *ALLOTTED*\n"
+                                        msg += f"      📈 Shares: *{shares_allotted}*\n\n"
                                     else:
-                                        msg += f"   📊 Status: {status}\n"
-                                        if shares_allotted and shares_allotted != "0":
-                                            msg += f"   📈 Shares Allotted: {shares_allotted}\n"
-                                        msg += "\n"
+                                        # Check if it's "not allotted" status
+                                        if status.lower() in ["not allotted", "not alloted"]:
+                                            not_allotted_count += 1
+                                            msg += f"      ❌ Status: *NOT ALLOTTED*\n\n"
+                                        else:
+                                            # Show any other status
+                                            msg += f"      📊 Status: {status}\n"
+                                            if shares_allotted and shares_allotted != "0":
+                                                msg += f"      📈 Shares: {shares_allotted}\n"
+                                            msg += "\n"
                                 else:
-                                    msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
+                                    msg += f"      📊 Status: ❌ NOT APPLIED\n\n"
 
-                            # Show navigation buttons
-                            reply_keyboard = [
-                                ["🔄 Refresh IPO List", "🔙 Back to Main Menu"]
-                            ]
-                            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-                            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+                            # Add congratulatory or encouragement message
+                            if allotted_count > 0:
+                                if allotted_count == 1:
+                                    msg += "🎉 *Congratulations!* You have been allotted 1 IPO!\n"
+                                else:
+                                    msg += f"🎉 *Congratulations!* You have been allotted {allotted_count} IPOs!\n"
+                            elif not_allotted_count > 0:
+                                msg += "💪 *Better luck next time!* Keep trying.\n"
+
+                            await update.message.reply_text(msg, parse_mode="Markdown")
                         else:
                             await update.message.reply_text("❌ Failed to fetch allotment status. Please try again.")
                     else:
