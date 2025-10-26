@@ -634,7 +634,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.error(f"Error fetching IPO list: {e}")
             await update.message.reply_text("❌ An error occurred. Please try again later.")
 
-    elif text and not text.startswith("⬅️") and not text.startswith("Next") and not text.startswith("🔄") and not text.startswith("🔙") and not text.startswith("📋") and not text.startswith("❌") and not text.startswith("ℹ️") and not text.startswith("➕"):
+    elif text and not text.startswith("⬅️") and not text.startswith("Next") and not text.startswith("🔄") and not text.startswith("🔙") and not text.startswith("📋") and not text.startswith("❌") and not text.startswith("ℹ️") and not text.startswith("➕") and not text.startswith("🗑️"):
         # Handle IPO selection from keyboard (any text that's not a special button)
         ipo_list = context.user_data.get("ipo_list", [])
         if ipo_list:
