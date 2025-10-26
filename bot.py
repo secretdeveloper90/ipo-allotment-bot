@@ -36,7 +36,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Reply keyboard (persistent keyboard at bottom)
     reply_keyboard = [
-        [" Manage PAN Numbers", "� Check IPO Allotment"],
+        ["📋 Manage PAN Numbers", "📊 Check IPO Allotment"],
         ["ℹ️ Help"]
     ]
     reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
@@ -461,7 +461,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
 
     # Handle reply keyboard button presses
-    if text == "� Check IPO Allotment":
+    if text == "📊 Check IPO Allotment":
         # Simulate callback query for IPO list
         try:
             page = 0
@@ -538,6 +538,40 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
 
         await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+
+    elif text == "➕ Add PAN Number":
+        # Handle Add PAN Number button
+        pan_count = get_pan_count(user_id)
+
+        # Check if user has reached the limit
+        if pan_count >= 20:
+            msg = "❌ *Limit Reached*\n\n"
+            msg += "You have reached the maximum limit of 20 PAN numbers.\n"
+            msg += "Please delete some PANs before adding new ones."
+
+            # Show PAN management keyboard
+            reply_keyboard = [
+                ["➕ Add PAN Number", "❌ Delete PAN Number"],
+                ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
+            ]
+            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
+            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+        else:
+            context.user_data["awaiting_pan"] = True
+            msg = f"📋 *Add PAN Number* ({pan_count}/20)\n\n"
+            msg += "Please send your PAN details in one of these formats:\n\n"
+            msg += "*Format 1:* PAN only\n"
+            msg += "`ABCDE1234F`\n\n"
+            msg += "*Format 2:* PAN with name\n"
+            msg += "`ABCDE1234F  John Doe`\n\n"
+            msg += "💡 Tip: Separate PAN and name with a space"
+
+            # Show only Back to Main Menu button while waiting for PAN input
+            reply_keyboard = [
+                ["🔙 Back to Main Menu"]
+            ]
+            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
+            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
 
     elif text == "ℹ️ Help":
         # Show help message
@@ -753,7 +787,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Show PAN management keyboard
             reply_keyboard = [
                 ["➕ Add PAN Number", "❌ Delete PAN Number"],
-                ["� View PAN Numbers", "🔙 Back to Main Menu"]
+                ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
             ]
             reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
             await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
