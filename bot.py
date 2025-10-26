@@ -442,8 +442,8 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     # Add navigation buttons
                     keyboard = [
-                        [InlineKeyboardButton("🔙 Check Another IPO", callback_data="ipo_list_0")],
-                        [InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
+                        [InlineKeyboardButton("� Refresh IPO List", callback_data="ipo_list_0")],
+                        [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_menu")]
                     ]
                     await loading_msg.edit_text(msg, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(keyboard))
                 else:
