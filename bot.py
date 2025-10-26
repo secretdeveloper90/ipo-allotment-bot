@@ -469,6 +469,97 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
     user_id = update.message.from_user.id
 
+    # IMPORTANT: Check awaiting_pan FIRST before any other text handling
+    if context.user_data.get("awaiting_pan"):
+        # Handle PAN input
+        # Parse the input - support multiple formats
+        # Format 1: ABCDE1234F (PAN only)
+        # Format 2: ABCDE1234F  John Doe (PAN with name, separated by spaces)
+
+        parts = text.split(None, 1)  # Split on first whitespace
+
+        if len(parts) == 1:
+            # Just PAN provided
+            pan = parts[0].upper()
+            name = "No Name"
+        elif len(parts) == 2:
+            # PAN and name provided
+            pan = parts[0].upper()
+            name = parts[1].strip()
+        else:
+            await update.message.reply_text(
+                "❌ *Invalid Format*\n\n"
+                "Please use one of these formats:\n"
+                "• ABCDE1234F (PAN only)\n"
+                "• ABCDE1234F  John Doe (PAN with name)",
+                parse_mode="Markdown"
+            )
+            return
+
+        # Validate PAN format (basic validation)
+        if len(pan) != 10:
+            await update.message.reply_text(
+                "❌ *Invalid PAN*\n\n"
+                "PAN must be 10 characters long.\n"
+                "*Format:* ABCDE1234F",
+                parse_mode="Markdown"
+            )
+            return
+
+        # Add the PAN
+        try:
+            add_pan(user_id, name, pan)
+            context.user_data["awaiting_pan"] = False
+
+            msg = f"✅ *PAN Added Successfully!*\n\n"
+            msg += f"👤 *Name:* {name}\n"
+            msg += f"📄 *PAN:* `{pan}`\n\n"
+            msg += "🎉 You can now check IPO allotment status."
+
+            # Show PAN management keyboard
+            reply_keyboard = [
+                ["➕ Add PAN Number", "❌ Delete PAN Number"],
+                ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
+            ]
+            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
+            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+        except Exception as e:
+            logger.error(f"Error adding PAN: {e}")
+            error_msg = str(e)
+
+            # Show PAN management keyboard after error
+            reply_keyboard = [
+                ["➕ Add PAN Number", "❌ Delete PAN Number"],
+                ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
+            ]
+            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
+
+            # Show specific error message
+            if "Maximum 20 PAN" in error_msg:
+                await update.message.reply_text(
+                    "❌ *Limit Reached*\n\n"
+                    "You have reached the maximum limit of 20 PAN numbers.\n"
+                    "Please delete some PANs before adding new ones.",
+                    reply_markup=reply_markup,
+                    parse_mode="Markdown"
+                )
+            elif "already added" in error_msg:
+                await update.message.reply_text(
+                    "❌ *Duplicate PAN*\n\n"
+                    "This PAN number is already added to your account.",
+                    reply_markup=reply_markup,
+                    parse_mode="Markdown"
+                )
+            else:
+                await update.message.reply_text(
+                    "❌ *Error*\n\n"
+                    "Failed to add PAN. Please try again.",
+                    reply_markup=reply_markup,
+                    parse_mode="Markdown"
+                )
+            context.user_data["awaiting_pan"] = False
+        return
+
     # Handle reply keyboard button presses
     if text == "📊 Check IPO Allotment":
         # Show IPO list with reply keyboard
@@ -913,95 +1004,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except (ValueError, IndexError) as e:
             logger.error(f"Error parsing delete button: {e}")
             await update.message.reply_text("❌ Error processing deletion.")
-
-    elif context.user_data.get("awaiting_pan"):
-        # Handle PAN input
-        # Parse the input - support multiple formats
-        # Format 1: ABCDE1234F (PAN only)
-        # Format 2: ABCDE1234F  John Doe (PAN with name, separated by spaces)
-
-        parts = text.split(None, 1)  # Split on first whitespace
-
-        if len(parts) == 1:
-            # Just PAN provided
-            pan = parts[0].upper()
-            name = "No Name"
-        elif len(parts) == 2:
-            # PAN and name provided
-            pan = parts[0].upper()
-            name = parts[1].strip()
-        else:
-            await update.message.reply_text(
-                "❌ *Invalid Format*\n\n"
-                "Please use one of these formats:\n"
-                "• ABCDE1234F (PAN only)\n"
-                "• ABCDE1234F  John Doe (PAN with name)",
-                parse_mode="Markdown"
-            )
-            return
-
-        # Validate PAN format (basic validation)
-        if len(pan) != 10:
-            await update.message.reply_text(
-                "❌ *Invalid PAN*\n\n"
-                "PAN must be 10 characters long.\n"
-                "*Format:* ABCDE1234F",
-                parse_mode="Markdown"
-            )
-            return
-
-        # Add the PAN
-        try:
-            add_pan(user_id, name, pan)
-            context.user_data["awaiting_pan"] = False
-
-            msg = f"✅ *PAN Added Successfully!*\n\n"
-            msg += f"👤 *Name:* {name}\n"
-            msg += f"📄 *PAN:* `{pan}`\n\n"
-            msg += "🎉 You can now check IPO allotment status."
-
-            # Show PAN management keyboard
-            reply_keyboard = [
-                ["➕ Add PAN Number", "❌ Delete PAN Number"],
-                ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
-            ]
-            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
-        except Exception as e:
-            logger.error(f"Error adding PAN: {e}")
-            error_msg = str(e)
-
-            # Show PAN management keyboard after error
-            reply_keyboard = [
-                ["➕ Add PAN Number", "❌ Delete PAN Number"],
-                ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
-            ]
-            reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-
-            # Show specific error message
-            if "Maximum 20 PAN" in error_msg:
-                await update.message.reply_text(
-                    "❌ *Limit Reached*\n\n"
-                    "You have reached the maximum limit of 20 PAN numbers.\n"
-                    "Please delete some PANs before adding new ones.",
-                    reply_markup=reply_markup,
-                    parse_mode="Markdown"
-                )
-            elif "already added" in error_msg:
-                await update.message.reply_text(
-                    "❌ *Duplicate PAN*\n\n"
-                    "This PAN number is already added to your account.",
-                    reply_markup=reply_markup,
-                    parse_mode="Markdown"
-                )
-            else:
-                await update.message.reply_text(
-                    "❌ *Error*\n\n"
-                    "Failed to add PAN. Please try again.",
-                    reply_markup=reply_markup,
-                    parse_mode="Markdown"
-                )
-            context.user_data["awaiting_pan"] = False
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Log errors and notify user"""
