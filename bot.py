@@ -62,18 +62,18 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = "📚 *How to use IPO Allotment Bot:*\n\n"
 
     msg += "*1. Manage PAN Numbers* 📋\n"
-    msg += "• Add PAN numbers with names (e.g., \"John Doe\")\n"
-    msg += "• Delete PAN numbers you no longer need\n"
-    msg += "• View all your saved PAN numbers\n\n"
+    msg += "➕ Add PAN numbers with names (e.g., \"John Doe\")\n"
+    msg += "❌ Delete PAN numbers you no longer need\n"
+    msg += "👁️ View all your saved PAN numbers\n\n"
 
     msg += "*2. Check IPO Allotment* 📊\n"
-    msg += "• Click \"Check IPO Allotment\"\n"
-    msg += "• Select an IPO from the available list\n"
-    msg += "• Get allotment status for all your PAN numbers\n\n"
+    msg += "🔍 Click \"Check IPO Allotment\"\n"
+    msg += "📝 Select an IPO from the available list\n"
+    msg += "📈 Get allotment status for all your PAN numbers\n\n"
 
     msg += "*Commands:*\n"
-    msg += "/start - Start the bot and show main menu\n"
-    msg += "/help - Show this help message\n\n"
+    msg += "▶️ /start - Start the bot and show main menu\n"
+    msg += "ℹ️ /help - Show this help message\n\n"
 
     msg += "*Flow:*\n"
     msg += "1️⃣ Add your PAN numbers\n"
@@ -81,15 +81,9 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg += "3️⃣ Choose an IPO\n"
     msg += "4️⃣ View results for all PANs\n\n"
 
-    msg += "Use the buttons below to navigate! 👇"
+    msg += "💡 Use the keyboard buttons below to navigate!"
 
-    keyboard = [
-        [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan"),
-         InlineKeyboardButton("📊 Check IPO Allotment", callback_data="ipo_list_0")],
-        [InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
-    ]
-
-    await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await update.message.reply_text(msg, parse_mode="Markdown")
 
 async def show_main_menu(message, text=None):
     if text is None:
@@ -132,12 +126,12 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not pans:
             msg = "📋 *Your PAN Numbers:* (0/20)\n\n"
             msg += "❌ No PAN numbers saved yet.\n\n"
-            msg += "Add your first PAN to start checking IPO allotments."
+            msg += "💡 Add your first PAN to start checking IPO allotments."
         else:
             msg = f"📋 *Your PAN Numbers:* ({total_pans}/20)\n\n"
             for idx, pan_data in enumerate(pans, 1):
-                msg += f"{idx}. *{pan_data['name']}*\n"
-                msg += f"   PAN: `{pan_data['pan']}`\n\n"
+                msg += f"👤 {idx}. *{pan_data['name']}*\n"
+                msg += f"   📄 PAN: `{pan_data['pan']}`\n\n"
 
         # Show PAN management keyboard
         reply_keyboard = [
@@ -409,8 +403,8 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         pan_number = pan_data["pan"]
                         pan_name = pan_data["name"]
 
-                        msg += f"*{idx}. {pan_name}*\n"
-                        msg += f"   PAN: {pan_number}\n"
+                        msg += f"👤 *{idx}. {pan_name}*\n"
+                        msg += f"   📋 PAN: `{pan_number}`\n"
 
                         # Get the response for this PAN
                         pan_response = pan_response_map.get(pan_number, {})
@@ -423,19 +417,19 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                             # Check status and display accordingly
                             if status.lower() == "not apply":
-                                msg += f"   Status: ❌ NOT APPLIED\n\n"
+                                msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
                             elif status.lower() == "allotted":
-                                msg += f"   Status: ✅ ALLOTTED\n"
-                                msg += f"   Shares Allotted: {shares_allotted}\n\n"
+                                msg += f"   📊 Status: ✅ ALLOTTED\n"
+                                msg += f"   📈 Shares Allotted: {shares_allotted}\n\n"
                             else:
                                 # Show any other status
-                                msg += f"   Status: {status}\n"
+                                msg += f"   📊 Status: {status}\n"
                                 if shares_allotted and shares_allotted != "0":
-                                    msg += f"   Shares Allotted: {shares_allotted}\n"
+                                    msg += f"   📈 Shares Allotted: {shares_allotted}\n"
                                 msg += "\n"
                         else:
                             # No valid response for this PAN
-                            msg += f"   Status: ❌ NOT APPLIED\n\n"
+                            msg += f"   📊 Status: ❌ NOT APPLIED\n\n"
 
                     # Add navigation buttons
                     keyboard = [
@@ -515,7 +509,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Build message with IPO count and PAN count
                 msg = f"📊 *IPO Allotment Check*\n\n"
                 msg += f"✅ IPO list updated ({total_ipos} IPOs available)\n\n"
-                msg += f"Select an IPO to check allotment status for your {pan_count} PAN number(s):\n\n"
+                msg += f"👇 Select an IPO to check allotment status for your {pan_count} PAN number(s):\n\n"
                 msg += f"📄 Page {page + 1} of {total_pages}"
 
                 await update.message.reply_text(
@@ -550,18 +544,18 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = "📚 *How to use IPO Allotment Bot:*\n\n"
 
         msg += "*1. Manage PAN Numbers* 📋\n"
-        msg += "• Add PAN numbers with names (e.g., \"John Doe\")\n"
-        msg += "• Delete PAN numbers you no longer need\n"
-        msg += "• View all your saved PAN numbers\n\n"
+        msg += "➕ Add PAN numbers with names (e.g., \"John Doe\")\n"
+        msg += "❌ Delete PAN numbers you no longer need\n"
+        msg += "👁️ View all your saved PAN numbers\n\n"
 
         msg += "*2. Check IPO Allotment* 📊\n"
-        msg += "• Click \"Check IPO Allotment\"\n"
-        msg += "• Select an IPO from the available list\n"
-        msg += "• Get allotment status for all your PAN numbers\n\n"
+        msg += "🔍 Click \"Check IPO Allotment\"\n"
+        msg += "📝 Select an IPO from the available list\n"
+        msg += "📈 Get allotment status for all your PAN numbers\n\n"
 
         msg += "*Commands:*\n"
-        msg += "/start - Start the bot and show main menu\n"
-        msg += "/help - Show this help message\n\n"
+        msg += "▶️ /start - Start the bot and show main menu\n"
+        msg += "ℹ️ /help - Show this help message\n\n"
 
         msg += "*Flow:*\n"
         msg += "1️⃣ Add your PAN numbers\n"
@@ -569,21 +563,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg += "3️⃣ Choose an IPO\n"
         msg += "4️⃣ View results for all PANs\n\n"
 
-        msg += "Use the buttons below to navigate! 👇"
+        msg += "💡 Use the keyboard buttons below to navigate!"
 
-        keyboard = [
-            [InlineKeyboardButton("📋 Manage PAN Numbers", callback_data="manage_pan"),
-             InlineKeyboardButton("� Check IPO Allotment", callback_data="ipo_list_0")],
-            [InlineKeyboardButton("🏠 Main Menu", callback_data="back_to_menu")]
-        ]
-
-        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
-
-    elif text == "➕ Add PAN Number":
-        # Prompt user to add PAN
-        pan_count = get_pan_count(user_id)
-        if pan_count >= 20:
-            msg = "⚠️ *Limit Reached*\n\n"
+        await update.message.reply_text(msg, parse_mode="Markdown")
             msg += "You have reached the maximum limit of 20 PAN numbers.\n"
             msg += "Please delete some PANs before adding new ones."
 
@@ -660,12 +642,12 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not pans:
             msg = "📋 *Your PAN Numbers:* (0/20)\n\n"
             msg += "❌ No PAN numbers saved yet.\n\n"
-            msg += "Add your first PAN to start checking IPO allotments."
+            msg += "💡 Add your first PAN to start checking IPO allotments."
         else:
             msg = f"📋 *Your PAN Numbers:* ({total_pans}/20)\n\n"
             for idx, pan_data in enumerate(pans, 1):
-                msg += f"{idx}. *{pan_data['name']}*\n"
-                msg += f"   PAN: `{pan_data['pan']}`\n\n"
+                msg += f"👤 {idx}. *{pan_data['name']}*\n"
+                msg += f"   📄 PAN: `{pan_data['pan']}`\n\n"
 
         # Show PAN management keyboard
         reply_keyboard = [
@@ -730,7 +712,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 delete_pan_by_id(pan_id)
 
                 msg = f"✅ *PAN Deleted Successfully*\n\n"
-                msg += f"Deleted: *{name}* - `{pan}`"
+                msg += f"🗑️ Deleted: *{name}* - `{pan}`"
 
                 # Clear deletion state
                 context.user_data["pans_for_deletion"] = None
@@ -791,8 +773,8 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             msg = f"✅ *PAN Added Successfully!*\n\n"
             msg += f"👤 *Name:* {name}\n"
-            msg += f"📋 *PAN:* `{pan}`\n\n"
-            msg += "You can now check IPO allotment status."
+            msg += f"📄 *PAN:* `{pan}`\n\n"
+            msg += "🎉 You can now check IPO allotment status."
 
             # Show PAN management keyboard
             reply_keyboard = [
