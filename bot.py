@@ -683,10 +683,10 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["awaiting_pan"] = False
         context.user_data["pans_for_deletion"] = None
 
-        # Show PAN management keyboard silently
+        # Show Main Menu keyboard silently
         reply_keyboard = [
-            ["➕ Add PAN Number", "❌ Delete PAN Number"],
-            ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
+            ["📋 Manage PAN Numbers", "📊 Check IPO Allotment"],
+            ["ℹ️ Help"]
         ]
         reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
         await update.message.reply_text("", reply_markup=reply_markup)
