@@ -668,23 +668,28 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "🔙 Back to PAN Management":
         # Clear deletion state and go back to PAN management
         context.user_data["pans_for_deletion"] = None
+        context.user_data["awaiting_pan"] = False
 
-        msg = "📋 *PAN Number Management*\n\n"
-        msg += "Choose an option:"
-
-        # Show PAN management keyboard
+        # Show PAN management keyboard silently
         reply_keyboard = [
             ["➕ Add PAN Number", "❌ Delete PAN Number"],
             ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
         ]
         reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
-        await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+        await update.message.reply_text("", reply_markup=reply_markup)
 
     elif text == "🔙 Back to Main Menu":
         # Clear any pending state
         context.user_data["awaiting_pan"] = False
         context.user_data["pans_for_deletion"] = None
-        # Don't send any message - just let the keyboard update naturally
+
+        # Show PAN management keyboard silently
+        reply_keyboard = [
+            ["➕ Add PAN Number", "❌ Delete PAN Number"],
+            ["📋 View PAN Numbers", "🔙 Back to Main Menu"]
+        ]
+        reply_markup = ReplyKeyboardMarkup(reply_keyboard, resize_keyboard=True)
+        await update.message.reply_text("", reply_markup=reply_markup)
 
     elif text.startswith("🗑️ Delete "):
         # Handle delete PAN button press
