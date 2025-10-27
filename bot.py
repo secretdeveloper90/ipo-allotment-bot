@@ -5,6 +5,9 @@ from database import init_db, add_pan, get_all_pans, delete_pan_by_id, get_pan_c
 from datetime import datetime
 import os
 import logging
+import asyncio
+import sys
+import traceback
 
 # Configure logging
 logging.basicConfig(
@@ -1068,42 +1071,111 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error in error handler: {e}")
 
+async def run_bot_with_retry():
+    """Run bot with automatic restart on failure - Optimized for Render"""
+    max_retries = 10
+    retry_count = 0
+    retry_delay = 3  # Start with 3 seconds
+    max_retry_delay = 60  # Max 1 minute between retries
+
+    while True:
+        try:
+            BOT_TOKEN = os.getenv("BOT_TOKEN")
+            WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+            PORT = int(os.getenv("PORT", 10000))
+            USE_WEBHOOK = os.getenv("USE_WEBHOOK", "true").lower() == "true"
+
+            if not BOT_TOKEN:
+                logger.error("❌ BOT_TOKEN not set in environment variables")
+                sys.exit(1)
+
+            app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+            app.add_handler(CommandHandler("start", start))
+            app.add_handler(CommandHandler("help", help_command))
+            app.add_handler(CallbackQueryHandler(handle_buttons))
+            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
+            # Add error handler
+            app.add_error_handler(error_handler)
+
+            logger.info("🚀 Bot is starting...")
+            print("🚀 Bot is starting...")
+
+            if USE_WEBHOOK and WEBHOOK_URL:
+                # Webhook mode for production (Render)
+                logger.info(f"Using webhook mode: {WEBHOOK_URL}")
+                try:
+                    app.run_webhook(
+                        listen="0.0.0.0",
+                        port=PORT,
+                        url_path=BOT_TOKEN,
+                        webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
+                        allowed_updates=Update.ALL_TYPES,
+                        drop_pending_updates=True
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Webhook error: {e}")
+                    raise
+            else:
+                # Polling mode for local development with retry
+                logger.info("Using polling mode with auto-restart")
+                await app.initialize()
+                await app.start()
+
+                try:
+                    # Run polling with timeout handling
+                    await app.updater.start_polling(
+                        allowed_updates=Update.ALL_TYPES,
+                        drop_pending_updates=True,
+                        timeout=30,
+                        read_timeout=15,
+                        write_timeout=15,
+                        connect_timeout=15,
+                        pool_timeout=15
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Polling error: {e}")
+                    raise
+                finally:
+                    await app.stop()
+                    await app.shutdown()
+
+        except KeyboardInterrupt:
+            logger.info("🛑 Bot stopped by user")
+            print("🛑 Bot stopped by user")
+            break
+        except Exception as e:
+            retry_count += 1
+            logger.error(f"❌ Bot crashed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            print(f"❌ Bot crashed: {e}")
+
+            if retry_count >= max_retries:
+                logger.error(f"❌ Max retries ({max_retries}) reached. Render will restart the service.")
+                print(f"❌ Max retries ({max_retries}) reached. Render will restart the service.")
+                sys.exit(1)
+
+            logger.info(f"🔄 Restarting bot in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
+            print(f"🔄 Restarting bot in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
+
+            await asyncio.sleep(retry_delay)
+
+            # Exponential backoff: increase delay for next retry
+            retry_delay = min(retry_delay * 1.5, max_retry_delay)
+
 def main():
-    BOT_TOKEN = os.getenv("BOT_TOKEN")
-    WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # e.g., https://your-app.onrender.com
-    PORT = int(os.getenv("PORT", 10000))
-    USE_WEBHOOK = os.getenv("USE_WEBHOOK", "true").lower() == "true"
-
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", help_command))
-    app.add_handler(CallbackQueryHandler(handle_buttons))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-
-    # Add error handler
-    app.add_error_handler(error_handler)
-
-    logger.info("🚀 Bot is running...")
-    print("🚀 Bot is running...")
-
-    if USE_WEBHOOK and WEBHOOK_URL:
-        # Webhook mode for production (Render)
-        logger.info(f"Using webhook mode: {WEBHOOK_URL}")
-
-        # Use python-telegram-bot's built-in webhook support
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=BOT_TOKEN,
-            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
-    else:
-        # Polling mode for local development
-        logger.info("Using polling mode")
-        app.run_polling()
+    """Main entry point"""
+    try:
+        asyncio.run(run_bot_with_retry())
+    except KeyboardInterrupt:
+        logger.info("🛑 Bot stopped")
+        print("🛑 Bot stopped")
+    except Exception as e:
+        logger.error(f"❌ Fatal error: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        print(f"❌ Fatal error: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
