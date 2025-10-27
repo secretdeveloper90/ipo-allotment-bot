@@ -8,6 +8,7 @@ import logging
 import sys
 import traceback
 import time
+import asyncio
 
 # Configure logging
 logging.basicConfig(
@@ -1071,8 +1072,69 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error in error handler: {e}")
 
+async def run_bot():
+    """Run bot with webhook or polling mode"""
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+    PORT = int(os.getenv("PORT", 10000))
+    USE_WEBHOOK = os.getenv("USE_WEBHOOK", "true").lower() == "true"
+
+    if not BOT_TOKEN:
+        logger.error("❌ BOT_TOKEN not set in environment variables")
+        sys.exit(1)
+
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("help", help_command))
+    app.add_handler(CallbackQueryHandler(handle_buttons))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+
+    # Add error handler
+    app.add_error_handler(error_handler)
+
+    logger.info("🚀 Bot is starting...")
+    print("🚀 Bot is starting...")
+
+    if USE_WEBHOOK and WEBHOOK_URL:
+        # Webhook mode for production (Render)
+        logger.info(f"Using webhook mode: {WEBHOOK_URL}")
+        logger.info("✅ Bot is ready to receive updates via webhook")
+        print("✅ Bot is ready to receive updates via webhook")
+
+        # Initialize and start bot
+        await app.initialize()
+        await app.start()
+
+        # Run webhook
+        await app.updater.start_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path=BOT_TOKEN,
+            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True
+        )
+
+        logger.info("✅ Webhook started successfully")
+        print("✅ Webhook started successfully")
+
+        # Keep the bot running
+        await asyncio.Event().wait()
+    else:
+        # Polling mode for local development
+        logger.info("Using polling mode")
+        print("Using polling mode")
+
+        # Run polling
+        await app.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True
+        )
+
+
 def main():
-    """Main entry point - Optimized for Render webhook mode"""
+    """Main entry point with retry logic"""
     max_retries = 10
     retry_count = 0
     retry_delay = 3  # Start with 3 seconds
@@ -1080,53 +1142,8 @@ def main():
 
     while True:
         try:
-            BOT_TOKEN = os.getenv("BOT_TOKEN")
-            WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-            PORT = int(os.getenv("PORT", 10000))
-            USE_WEBHOOK = os.getenv("USE_WEBHOOK", "true").lower() == "true"
-
-            if not BOT_TOKEN:
-                logger.error("❌ BOT_TOKEN not set in environment variables")
-                sys.exit(1)
-
-            app = ApplicationBuilder().token(BOT_TOKEN).build()
-
-            app.add_handler(CommandHandler("start", start))
-            app.add_handler(CommandHandler("help", help_command))
-            app.add_handler(CallbackQueryHandler(handle_buttons))
-            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
-
-            # Add error handler
-            app.add_error_handler(error_handler)
-
-            logger.info("🚀 Bot is starting...")
-            print("🚀 Bot is starting...")
-
-            if USE_WEBHOOK and WEBHOOK_URL:
-                # Webhook mode for production (Render)
-                logger.info(f"Using webhook mode: {WEBHOOK_URL}")
-                logger.info("✅ Bot is ready to receive updates via webhook")
-                print("✅ Bot is ready to receive updates via webhook")
-
-                # Run webhook - this blocks until interrupted
-                app.run_webhook(
-                    listen="0.0.0.0",
-                    port=PORT,
-                    url_path=BOT_TOKEN,
-                    webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
-                    allowed_updates=Update.ALL_TYPES,
-                    drop_pending_updates=True
-                )
-            else:
-                # Polling mode for local development
-                logger.info("Using polling mode")
-                print("Using polling mode")
-
-                # Run polling - this blocks until interrupted
-                app.run_polling(
-                    allowed_updates=Update.ALL_TYPES,
-                    drop_pending_updates=True
-                )
+            logger.info(f"Starting bot (Attempt {retry_count + 1}/{max_retries})")
+            asyncio.run(run_bot())
 
         except KeyboardInterrupt:
             logger.info("🛑 Bot stopped by user")
