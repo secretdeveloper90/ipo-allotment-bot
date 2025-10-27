@@ -1185,25 +1185,38 @@ async def run_bot():
         logger.info("✅ Bot is ready to receive updates via webhook")
         print("✅ Bot is ready to receive updates via webhook")
 
-        # Initialize and start bot
-        await app.initialize()
-        await app.start()
+        try:
+            # Initialize and start bot
+            await app.initialize()
+            await app.start()
 
-        # Run webhook
-        await app.updater.start_webhook(
-            listen="0.0.0.0",
-            port=PORT,
-            url_path=BOT_TOKEN,
-            webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True
-        )
+            # Run webhook
+            await app.updater.start_webhook(
+                listen="0.0.0.0",
+                port=PORT,
+                url_path=BOT_TOKEN,
+                webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True
+            )
 
-        logger.info("✅ Webhook started successfully")
-        print("✅ Webhook started successfully")
+            logger.info("✅ Webhook started successfully")
+            print("✅ Webhook started successfully")
 
-        # Keep the bot running
-        await asyncio.Event().wait()
+            # Keep the bot running indefinitely
+            logger.info("🔄 Bot is now listening for updates...")
+            print("🔄 Bot is now listening for updates...")
+
+            # Create an event that never gets set, so the bot runs forever
+            stop_event = asyncio.Event()
+            await stop_event.wait()
+        except asyncio.CancelledError:
+            logger.info("Bot was cancelled")
+            raise
+        except Exception as e:
+            logger.error(f"Error in webhook mode: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            raise
     else:
         # Polling mode for local development
         logger.info("Using polling mode")
@@ -1226,7 +1239,18 @@ def main():
     while True:
         try:
             logger.info(f"Starting bot (Attempt {retry_count + 1}/{max_retries})")
+            print(f"Starting bot (Attempt {retry_count + 1}/{max_retries})")
+
+            # Run the bot - this should run indefinitely
             asyncio.run(run_bot())
+
+            # If we reach here, the bot exited normally (shouldn't happen in webhook mode)
+            logger.warning("⚠️ Bot exited normally. This shouldn't happen in webhook mode.")
+            print("⚠️ Bot exited normally. This shouldn't happen in webhook mode.")
+
+            # Reset retry count on successful start
+            retry_count = 0
+            retry_delay = 3
 
         except KeyboardInterrupt:
             logger.info("🛑 Bot stopped by user")
