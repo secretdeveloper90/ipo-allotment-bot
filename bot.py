@@ -782,72 +782,155 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif text == "⬅️ Previous":
         # Handle previous page
-        current_page = context.user_data.get("current_page", 0)
-        if current_page > 0:
-            new_page = current_page - 1
-            # Simulate callback for previous page
-            class FakeQuery:
-                def __init__(self):
-                    self.from_user = update.message.from_user
-                    self.data = f"ipo_list_{new_page}"
-                async def answer(self):
-                    pass
-                class FakeMessage:
-                    async def reply_text(self, *args, **kwargs):
-                        await update.message.reply_text(*args, **kwargs)
-                message = FakeMessage()
+        try:
+            current_page = context.user_data.get("current_page", 0)
+            if current_page > 0:
+                new_page = current_page - 1
+                context.user_data["current_page"] = new_page
 
-            fake_query = FakeQuery()
-            fake_update = type('obj', (object,), {'callback_query': fake_query})()
-            await handle_buttons(fake_update, context)
-        else:
-            await update.message.reply_text("❌ Already on first page.")
+                # Fetch and display IPO list for previous page
+                try:
+                    page = new_page
+                    res = requests.get(API_URL, timeout=10)
+                    if res.status_code == 200:
+                        ipos = res.json().get("data", [])
+                        context.user_data["ipo_list"] = ipos
+
+                        items_per_page = 5
+                        start_idx = page * items_per_page
+                        end_idx = start_idx + items_per_page
+                        page_ipos = ipos[start_idx:end_idx]
+
+                        if page_ipos:
+                            msg = f"📊 *Select an IPO* (Page {page + 1})\n\n"
+                            keyboard = []
+                            for ipo in page_ipos:
+                                ipo_name = ipo.get('iponame', 'N/A')
+                                display_name = ipo_name[:35] + "..." if len(ipo_name) > 35 else ipo_name
+                                keyboard.append([InlineKeyboardButton(display_name, callback_data=f"check_{ipo.get('ipoid')}")])
+
+                            # Add navigation buttons
+                            nav_buttons = []
+                            if page > 0:
+                                nav_buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"ipo_list_{page - 1}"))
+                            if end_idx < len(ipos):
+                                nav_buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"ipo_list_{page + 1}"))
+                            if nav_buttons:
+                                keyboard.append(nav_buttons)
+
+                            keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")])
+
+                            await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+                        else:
+                            await update.message.reply_text("❌ No IPOs available on this page.")
+                    else:
+                        await update.message.reply_text("❌ Failed to fetch IPO list.")
+                except Exception as e:
+                    logger.error(f"Error fetching IPO list for previous page: {e}")
+                    await update.message.reply_text("❌ Error loading previous page.")
+            else:
+                await update.message.reply_text("❌ Already on first page.")
+        except Exception as e:
+            logger.error(f"Error handling previous page: {e}")
+            await update.message.reply_text("❌ Error processing request.")
 
     elif text == "Next ➡️":
         # Handle next page
-        current_page = context.user_data.get("current_page", 0)
-        res = requests.get(API_URL, timeout=10)
-        if res.status_code == 200:
-            ipos = res.json().get("data", [])
-            total_ipos = len(ipos)
-            total_pages = (total_ipos + IPOS_PER_PAGE - 1) // IPOS_PER_PAGE
+        try:
+            current_page = context.user_data.get("current_page", 0)
+            res = requests.get(API_URL, timeout=10)
+            if res.status_code == 200:
+                ipos = res.json().get("data", [])
+                total_ipos = len(ipos)
+                total_pages = (total_ipos + IPOS_PER_PAGE - 1) // IPOS_PER_PAGE
 
-            if current_page < total_pages - 1:
-                new_page = current_page + 1
-                # Simulate callback for next page
-                class FakeQuery:
-                    def __init__(self):
-                        self.from_user = update.message.from_user
-                        self.data = f"ipo_list_{new_page}"
-                    async def answer(self):
-                        pass
-                    class FakeMessage:
-                        async def reply_text(self, *args, **kwargs):
-                            await update.message.reply_text(*args, **kwargs)
-                    message = FakeMessage()
+                if current_page < total_pages - 1:
+                    new_page = current_page + 1
+                    context.user_data["current_page"] = new_page
 
-                fake_query = FakeQuery()
-                fake_update = type('obj', (object,), {'callback_query': fake_query})()
-                await handle_buttons(fake_update, context)
+                    # Display next page
+                    start_idx = new_page * IPOS_PER_PAGE
+                    end_idx = start_idx + IPOS_PER_PAGE
+                    page_ipos = ipos[start_idx:end_idx]
+
+                    if page_ipos:
+                        msg = f"📊 *Select an IPO* (Page {new_page + 1})\n\n"
+                        keyboard = []
+                        for ipo in page_ipos:
+                            ipo_name = ipo.get('iponame', 'N/A')
+                            display_name = ipo_name[:35] + "..." if len(ipo_name) > 35 else ipo_name
+                            keyboard.append([InlineKeyboardButton(display_name, callback_data=f"check_{ipo.get('ipoid')}")])
+
+                        # Add navigation buttons
+                        nav_buttons = []
+                        if new_page > 0:
+                            nav_buttons.append(InlineKeyboardButton("⬅️ Previous", callback_data=f"ipo_list_{new_page - 1}"))
+                        if end_idx < total_ipos:
+                            nav_buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"ipo_list_{new_page + 1}"))
+                        if nav_buttons:
+                            keyboard.append(nav_buttons)
+
+                        keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")])
+
+                        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+                    else:
+                        await update.message.reply_text("❌ No IPOs available on this page.")
+                else:
+                    await update.message.reply_text("❌ Already on last page.")
             else:
-                await update.message.reply_text("❌ Already on last page.")
+                await update.message.reply_text("❌ Failed to fetch IPO list.")
+        except Exception as e:
+            logger.error(f"Error handling next page: {e}")
+            await update.message.reply_text("❌ Error processing request.")
 
     elif text == "🔄 Refresh IPO List":
         # Handle refresh - go back to page 0
-        class FakeQuery:
-            def __init__(self):
-                self.from_user = update.message.from_user
-                self.data = "ipo_list_0"
-            async def answer(self):
-                pass
-            class FakeMessage:
-                async def reply_text(self, *args, **kwargs):
-                    await update.message.reply_text(*args, **kwargs)
-            message = FakeMessage()
+        try:
+            context.user_data["current_page"] = 0
 
-        fake_query = FakeQuery()
-        fake_update = type('obj', (object,), {'callback_query': fake_query})()
-        await handle_buttons(fake_update, context)
+            # Fetch and display IPO list
+            try:
+                page = 0
+                res = requests.get(API_URL, timeout=10)
+                if res.status_code == 200:
+                    ipos = res.json().get("data", [])
+                    context.user_data["ipo_list"] = ipos
+
+                    items_per_page = IPOS_PER_PAGE
+                    start_idx = page * items_per_page
+                    end_idx = start_idx + items_per_page
+                    page_ipos = ipos[start_idx:end_idx]
+
+                    if page_ipos:
+                        msg = f"📊 *Select an IPO* (Page {page + 1})\n\n"
+                        keyboard = []
+                        for ipo in page_ipos:
+                            ipo_name = ipo.get('iponame', 'N/A')
+                            display_name = ipo_name[:35] + "..." if len(ipo_name) > 35 else ipo_name
+                            keyboard.append([InlineKeyboardButton(display_name, callback_data=f"check_{ipo.get('ipoid')}")])
+
+                        # Add navigation buttons
+                        nav_buttons = []
+                        if end_idx < len(ipos):
+                            nav_buttons.append(InlineKeyboardButton("Next ➡️", callback_data=f"ipo_list_1"))
+                        if nav_buttons:
+                            keyboard.append(nav_buttons)
+
+                        keyboard.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_menu")])
+
+                        await update.message.reply_text(msg, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+                    else:
+                        await update.message.reply_text("❌ No IPOs available.")
+                else:
+                    await update.message.reply_text("❌ Failed to fetch IPO list.")
+            except requests.exceptions.Timeout:
+                await update.message.reply_text("⏱️ Request timed out. Please try again.")
+            except Exception as e:
+                logger.error(f"Error fetching IPO list: {e}")
+                await update.message.reply_text("❌ An error occurred. Please try again later.")
+        except Exception as e:
+            logger.error(f"Error refreshing IPO list: {e}")
+            await update.message.reply_text("❌ Error processing request.")
 
     elif text == "📋 Manage PAN Numbers":
         # Show PAN management menu with reply keyboard
