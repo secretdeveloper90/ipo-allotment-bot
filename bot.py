@@ -5,9 +5,9 @@ from database import init_db, add_pan, get_all_pans, delete_pan_by_id, get_pan_c
 from datetime import datetime
 import os
 import logging
-import asyncio
 import sys
 import traceback
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -1071,8 +1071,8 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Error in error handler: {e}")
 
-async def run_bot_with_retry():
-    """Run bot with automatic restart on failure - Optimized for Render"""
+def main():
+    """Main entry point - Optimized for Render webhook mode"""
     max_retries = 10
     retry_count = 0
     retry_delay = 3  # Start with 3 seconds
@@ -1105,41 +1105,28 @@ async def run_bot_with_retry():
             if USE_WEBHOOK and WEBHOOK_URL:
                 # Webhook mode for production (Render)
                 logger.info(f"Using webhook mode: {WEBHOOK_URL}")
-                try:
-                    app.run_webhook(
-                        listen="0.0.0.0",
-                        port=PORT,
-                        url_path=BOT_TOKEN,
-                        webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
-                        allowed_updates=Update.ALL_TYPES,
-                        drop_pending_updates=True
-                    )
-                except Exception as e:
-                    logger.error(f"❌ Webhook error: {e}")
-                    raise
-            else:
-                # Polling mode for local development with retry
-                logger.info("Using polling mode with auto-restart")
-                await app.initialize()
-                await app.start()
+                logger.info("✅ Bot is ready to receive updates via webhook")
+                print("✅ Bot is ready to receive updates via webhook")
 
-                try:
-                    # Run polling with timeout handling
-                    await app.updater.start_polling(
-                        allowed_updates=Update.ALL_TYPES,
-                        drop_pending_updates=True,
-                        timeout=30,
-                        read_timeout=15,
-                        write_timeout=15,
-                        connect_timeout=15,
-                        pool_timeout=15
-                    )
-                except Exception as e:
-                    logger.error(f"❌ Polling error: {e}")
-                    raise
-                finally:
-                    await app.stop()
-                    await app.shutdown()
+                # Run webhook - this blocks until interrupted
+                app.run_webhook(
+                    listen="0.0.0.0",
+                    port=PORT,
+                    url_path=BOT_TOKEN,
+                    webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
+                    allowed_updates=Update.ALL_TYPES,
+                    drop_pending_updates=True
+                )
+            else:
+                # Polling mode for local development
+                logger.info("Using polling mode")
+                print("Using polling mode")
+
+                # Run polling - this blocks until interrupted
+                app.run_polling(
+                    allowed_updates=Update.ALL_TYPES,
+                    drop_pending_updates=True
+                )
 
         except KeyboardInterrupt:
             logger.info("🛑 Bot stopped by user")
@@ -1159,23 +1146,10 @@ async def run_bot_with_retry():
             logger.info(f"🔄 Restarting bot in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
             print(f"🔄 Restarting bot in {retry_delay} seconds... (Attempt {retry_count}/{max_retries})")
 
-            await asyncio.sleep(retry_delay)
+            time.sleep(retry_delay)
 
             # Exponential backoff: increase delay for next retry
             retry_delay = min(retry_delay * 1.5, max_retry_delay)
-
-def main():
-    """Main entry point"""
-    try:
-        asyncio.run(run_bot_with_retry())
-    except KeyboardInterrupt:
-        logger.info("🛑 Bot stopped")
-        print("🛑 Bot stopped")
-    except Exception as e:
-        logger.error(f"❌ Fatal error: {e}")
-        logger.error(f"Traceback: {traceback.format_exc()}")
-        print(f"❌ Fatal error: {e}")
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()
